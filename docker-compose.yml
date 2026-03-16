@@ -1,0 +1,9 @@
+services:
+  odonto-bmo-front:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: odonto-bmo-front
+    ports:
+      - "8080:80"
+    restart: unless-stopped

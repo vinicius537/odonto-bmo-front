@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Odonto BMO">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#2f6d7b" />
+      <stop offset="100%" stop-color="#4f8ea0" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)" />
+  <path
+    d="M22 18c0 4.6 2.7 8 6.2 9.4a1.5 1.5 0 0 1 .9 1.4v6.4a2.9 2.9 0 1 0 5.8 0v-6.4a1.5 1.5 0 0 1 .9-1.4C39.3 26 42 22.6 42 18"
+    fill="none"
+    stroke="#fff"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="4"
+  />
+  <path
+    d="M22 18v7M42 18v7M32 12v10"
+    fill="none"
+    stroke="#fff"
+    stroke-linecap="round"
+    stroke-width="4"
+  />
+</svg>
