@@ -21,6 +21,7 @@ import type { ClinicUser, ClinicUserCreateInput, ClinicUserUpdateInput } from "@
 import { apiRequest } from "@/lib/api/client";
 import { ensureArray } from "@/lib/collections";
 import { pushNotification } from "@/lib/notifications";
+import { translateGenericStatus, translateUserRole } from "@/lib/status-labels";
 import { toast } from "@/components/ui/use-toast";
 
 const roleStyles: Record<string, string> = {
@@ -237,7 +238,7 @@ const Equipe = () => {
         <StatCard title="Total" value={String(clinicUsers.length)} icon={Users} />
         <StatCard title="Admins" value={String(admins)} icon={ShieldCheck} />
         <StatCard title="Doutores" value={String(doctors)} icon={Stethoscope} />
-        <StatCard title="Secretaria" value={String(secretaries)} icon={UserRound} />
+        <StatCard title="Secretárias" value={String(secretaries)} icon={UserRound} />
       </div>
 
       <section className="rounded-xl border bg-card p-5 shadow-card">
@@ -271,11 +272,11 @@ const Equipe = () => {
                       <td className="py-3 font-medium">{user.name}</td>
                       <td className="py-3">
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${roleStyles[user.role] ?? "bg-muted text-muted-foreground"}`}>
-                          {user.role}
+                          {translateUserRole(user.role)}
                         </span>
                       </td>
                       <td className="py-3 text-muted-foreground">{user.email}</td>
-                      <td className="py-3 text-muted-foreground">{user.status}</td>
+                      <td className="py-3 text-muted-foreground">{translateGenericStatus(user.status)}</td>
                       <td className="py-3 text-muted-foreground">{enabledModules} ativos</td>
                       <td className="py-3 text-right">
                         {canManageTeam ? (
@@ -297,14 +298,14 @@ const Equipe = () => {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>{editingUser ? "Gerenciar acesso da equipe" : "Novo membro da equipe"}</DialogTitle>
-              <DialogDescription>
-                {editingUser
-                  ? "Ajuste papel, status e módulos liberados para esta pessoa na clínica ativa."
-                  : "Cadastre secretária, doutor ou administrador já definindo os módulos liberados para a mesa."}
-              </DialogDescription>
-            </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editingUser ? "Gerenciar acesso da equipe" : "Novo membro da equipe"}</DialogTitle>
+            <DialogDescription>
+              {editingUser
+                ? "Ajuste papel, status e módulos liberados para esta pessoa na clínica ativa."
+                : "Cadastre secretária, doutor ou administrador já definindo os módulos liberados para a mesa."}
+            </DialogDescription>
+          </DialogHeader>
 
           <form onSubmit={handleSave} className="space-y-5">
             <div className="grid gap-4 md:grid-cols-2">
@@ -345,9 +346,9 @@ const Equipe = () => {
                   onChange={(event) => handleRoleChange(event.target.value as UserRole)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value="admin">Admin</option>
+                  <option value="admin">Administrador</option>
                   <option value="doutor">Doutor</option>
-                  <option value="secretaria">Secretaria</option>
+                  <option value="secretaria">Secretária</option>
                 </select>
               </div>
               <div>

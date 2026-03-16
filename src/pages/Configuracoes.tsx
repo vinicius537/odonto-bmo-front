@@ -31,6 +31,7 @@ import {
   normalizeBrazilPhoneDigits,
 } from "@/lib/masks";
 import { pushNotification } from "@/lib/notifications";
+import { translateGenericStatus, translateUserRole } from "@/lib/status-labels";
 
 const roleStyles: Record<string, string> = {
   admin: "bg-primary/10 text-primary",
@@ -431,11 +432,11 @@ const Configuracoes = () => {
                   <td className="py-3 font-medium">{user.name}</td>
                   <td className="py-3">
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${roleStyles[user.role] ?? "bg-muted text-muted-foreground"}`}>
-                      {user.role}
+                      {translateUserRole(user.role)}
                     </span>
                   </td>
                   <td className="py-3 text-muted-foreground">{user.email}</td>
-                  <td className="py-3 text-muted-foreground">{user.status}</td>
+                  <td className="py-3 text-muted-foreground">{translateGenericStatus(user.status)}</td>
                 </tr>
               ))}
               {clinicUsers.length === 0 && (

@@ -292,7 +292,7 @@ export default function Assinatura() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium">Mes de vencimento</label>
+                <label className="mb-1.5 block text-sm font-medium">Mês de vencimento</label>
                 <Input
                   value={card.expiry_month}
                   onChange={(event) => setCard((current) => ({ ...current, expiry_month: maskMonth(event.target.value) }))}

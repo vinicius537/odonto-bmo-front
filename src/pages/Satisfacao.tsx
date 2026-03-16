@@ -21,6 +21,7 @@ import type { CreateMessageTemplateInput, MessageDispatch, MessageTemplate, Send
 import { apiRequest } from "@/lib/api/client";
 import { ensureArray } from "@/lib/collections";
 import { formatDateValue } from "@/lib/date";
+import { translateMessageStatus } from "@/lib/status-labels";
 
 interface SatisfactionOverview {
   completed_appointments: number;
@@ -285,7 +286,7 @@ const Satisfacao = () => {
                       <p className="font-medium">{appointment.patient_name || "Paciente"}</p>
                       <p className="text-sm text-muted-foreground">{appointment.procedure_name}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {formatDateValue(appointment.appointment_at, "dd/MM/yyyy HH:mm", { locale: ptBR })} • {appointment.doctor_name || "Profissional"}
+                        {formatDateValue(appointment.appointment_at, "dd/MM/yyyy HH:mm", { locale: ptBR })} - {appointment.doctor_name || "Profissional"}
                       </p>
                     </div>
                     <Button onClick={() => openSendDialog(appointment.appointment_id)}>Enviar agora</Button>
@@ -315,7 +316,7 @@ const Satisfacao = () => {
                     <p className="text-sm text-muted-foreground">{message.body}</p>
                   </div>
                   <div className="text-right text-xs text-muted-foreground">
-                    <p>{message.status}</p>
+                    <p>{translateMessageStatus(message.status)}</p>
                     <p>{formatDateValue(message.created_at, "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
                   </div>
                 </div>

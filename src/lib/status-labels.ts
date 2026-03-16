@@ -49,6 +49,19 @@ export function translateMessageKind(kind: string | null | undefined) {
   }
 }
 
+export function translateMessageChannel(channel: string | null | undefined) {
+  switch ((channel ?? "").toLowerCase()) {
+    case "whatsapp":
+      return "WhatsApp";
+    case "sms":
+      return "SMS";
+    case "email":
+      return "E-mail";
+    default:
+      return channel || "-";
+  }
+}
+
 export function translatePatientStatus(status: string | null | undefined) {
   switch ((status ?? "").toLowerCase()) {
     case "scheduled":
@@ -61,6 +74,38 @@ export function translatePatientStatus(status: string | null | undefined) {
       return "Em tratamento";
     case "finalizado":
       return "Finalizado";
+    default:
+      return status || "-";
+  }
+}
+
+export function translateUserRole(role: string | null | undefined) {
+  switch ((role ?? "").toLowerCase()) {
+    case "admin":
+      return "Administrador";
+    case "doutor":
+      return "Doutor";
+    case "secretaria":
+      return "Secretária";
+    default:
+      return role || "-";
+  }
+}
+
+export function translateGenericStatus(status: string | null | undefined) {
+  switch ((status ?? "").toLowerCase()) {
+    case "active":
+    case "ativo":
+      return "Ativo";
+    case "inactive":
+    case "inativo":
+      return "Inativo";
+    case "pending":
+      return "Pendente";
+    case "paid":
+      return "Pago";
+    case "overdue":
+      return "Em atraso";
     default:
       return status || "-";
   }

@@ -27,7 +27,7 @@ import {
 import { apiRequest } from "@/lib/api/client";
 import { ensureArray } from "@/lib/collections";
 import { formatDateValue } from "@/lib/date";
-import { translateMessageKind, translateMessageStatus } from "@/lib/status-labels";
+import { translateMessageChannel, translateMessageKind, translateMessageStatus } from "@/lib/status-labels";
 
 const statusStyle: Record<string, string> = {
   sent: "text-warning",
@@ -169,7 +169,7 @@ const Mensagens = () => {
       });
       const refreshedTemplates = await apiRequest<MessageTemplate[] | null>("/message-templates", { clinic: true });
       setTemplates(ensureArray(refreshedTemplates));
-      toast({ title: "Template criado", description: "O novo template ja esta disponivel para envio." });
+      toast({ title: "Template criado", description: "O novo template já está disponível para envio." });
       setTemplateDialogOpen(false);
       setTemplateForm(emptyTemplate);
     } catch (error) {
@@ -237,7 +237,7 @@ const Mensagens = () => {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{template.name}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {template.kind} - {template.channel}
+                        {translateMessageKind(template.kind)} - {translateMessageChannel(template.channel)}
                       </p>
                     </div>
                     <span className={`text-[10px] font-semibold ${template.active ? "text-success" : "text-muted-foreground"}`}>

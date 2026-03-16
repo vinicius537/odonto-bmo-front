@@ -40,7 +40,7 @@ import type { Patient } from "@/features/patients/api";
 import { apiRequest } from "@/lib/api/client";
 import { ensureArray } from "@/lib/collections";
 import { formatDateValue, toValidDate } from "@/lib/date";
-import { translateAppointmentStatus } from "@/lib/status-labels";
+import { translateAppointmentStatus, translateUserRole } from "@/lib/status-labels";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -416,7 +416,7 @@ const Agenda = () => {
                 viewMode === mode ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {mode === "day" ? "Dia" : mode === "week" ? "Semana" : "Mes"}
+              {mode === "day" ? "Dia" : mode === "week" ? "Semana" : "Mês"}
             </button>
           ))}
         </div>
@@ -427,7 +427,7 @@ const Agenda = () => {
           <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Carregando agenda...</div>
         ) : appointments.length === 0 ? (
           <div className="rounded-xl border bg-card p-10 text-center text-sm text-muted-foreground shadow-card">
-            Nenhuma consulta encontrada para este periodo.
+            Nenhuma consulta encontrada para este período.
           </div>
         ) : viewMode === "day" ? (
           <div className="space-y-3">
@@ -574,7 +574,7 @@ const Agenda = () => {
                     .filter((user) => user.role === "admin" || user.role === "doutor")
                     .map((user) => (
                       <option key={user.user_id} value={user.user_id}>
-                        {user.name} ({user.role})
+                        {user.name} ({translateUserRole(user.role)})
                       </option>
                     ))}
                 </select>
@@ -588,7 +588,7 @@ const Agenda = () => {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium">Titulo</label>
+                <label className="mb-1.5 block text-sm font-medium">Título</label>
                 <Input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
               </div>
               <div>
@@ -610,12 +610,12 @@ const Agenda = () => {
                   <option value="scheduled">Agendada</option>
                   <option value="pending">Pendente</option>
                   <option value="confirmed">Confirmada</option>
-                  <option value="completed">Concluida</option>
+                  <option value="completed">Concluída</option>
                   <option value="no_show">No-show</option>
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium">Inicio</label>
+                <label className="mb-1.5 block text-sm font-medium">Início</label>
                 <Input
                   type="time"
                   value={form.startTime}
@@ -647,7 +647,7 @@ const Agenda = () => {
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving ? "Salvando..." : editingAppointmentId ? "Salvar alteracoes" : "Criar consulta"}
+                {saving ? "Salvando..." : editingAppointmentId ? "Salvar alterações" : "Criar consulta"}
               </Button>
             </DialogFooter>
           </form>
