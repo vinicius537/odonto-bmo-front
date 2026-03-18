@@ -34,6 +34,24 @@ export function registerRequest(input: RegisterAccountInput) {
   });
 }
 
+export interface StartRegisterInput {
+  name: string;
+  email: string;
+  password: string;
+  plan_code: string;
+  document: string;
+  phone?: string;
+}
+
+export function startRegisterRequest(input: StartRegisterInput) {
+  return apiRequest<{ invoice_url: string }>("/auth/start-register", {
+    method: "POST",
+    auth: false,
+    body: input,
+    retryOnUnauthorized: false,
+  });
+}
+
 export function forgotPasswordRequest(input: ForgotPasswordInput) {
   return apiRequest<{ status?: string }>("/auth/password/forgot", {
     method: "POST",

@@ -11,6 +11,7 @@ import { SubscriptionProvider } from "@/features/subscriptions/subscription-cont
 import { queryClient } from "@/lib/query-client";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import RegisterPending from "./pages/RegisterPending";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
@@ -42,6 +43,7 @@ const App = () => (
                 <Route path="/" element={<Login />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/cadastro" element={<Register />} />
+                <Route path="/cadastro/pendente" element={<RegisterPending />} />
                 <Route path="/esqueci-senha" element={<ForgotPassword />} />
                 <Route path="/redefinir-senha" element={<ResetPassword />} />
                 <Route element={<ProtectedRoute />}>

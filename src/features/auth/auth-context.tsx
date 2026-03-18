@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { loginRequest, logoutWithRefreshToken, meRequest, registerRequest } from "@/features/auth/api";
+import { loginRequest, logoutWithRefreshToken, meRequest, registerRequest, startRegisterRequest } from "@/features/auth/api";
+import type { StartRegisterInput } from "@/features/auth/api";
 import { AuthContext } from "@/features/auth/context";
 import type { AuthStatus } from "@/features/auth/context";
 import type { AuthContextValue } from "@/features/auth/context";
@@ -117,6 +118,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const startRegister = useCallback(async (input: StartRegisterInput): Promise<string> => {
+    const result = await startRegisterRequest(input);
+    return result.invoice_url;
+  }, []);
+
   const logout = useCallback(async () => {
     const currentSession = loadStoredSession();
     try {
@@ -164,11 +170,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       activeRole: session ? resolveRole(session) : null,
       login,
       register,
+      startRegister,
       logout,
       selectClinic,
       refreshProfile,
     };
-  }, [login, logout, refreshProfile, register, selectClinic, session, status]);
+  }, [login, logout, refreshProfile, register, startRegister, selectClinic, session, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -14,6 +14,7 @@ export interface AuthContextValue {
   activeRole: UserRole | null;
   login: (email: string, password: string) => Promise<StoredSession>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  startRegister: (input: import("@/features/auth/api").StartRegisterInput) => Promise<string>;
   logout: () => Promise<void>;
   selectClinic: (clinicId: string) => void;
   refreshProfile: () => Promise<void>;
