@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Stethoscope, Check } from "lucide-react";
+import { Eye, EyeOff, Stethoscope } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,36 +14,19 @@ const PASSWORD_REQUIREMENTS = [
   "Ao menos 1 número",
 ];
 
-const PLANS = [
-  {
-    code: "basic",
-    name: "Básico",
-    price: "R$ 109",
-    period: "/mês",
-    features: ["1 usuário", "Agenda e pacientes", "Prontuários", "Mensagens"],
-  },
-  {
-    code: "professional",
-    name: "Profissional",
-    price: "R$ 149",
-    period: "/mês",
-    features: ["Até 2 usuários", "Tudo do Básico", "Gestão de equipe", "Relatórios"],
-    highlighted: true,
-  },
-  {
-    code: "enterprise",
-    name: "Enterprise",
-    price: "R$ 219",
-    period: "/mês",
-    features: ["Usuários ilimitados", "Tudo do Profissional", "Estoque", "Suporte prioritário"],
-  },
-];
+interface PricingPlan {
+  id: string;
+  name: string;
+  price_monthly: number;
+}
 
 function isPasswordStrong(password: string) {
   return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
 }
 
 const Register = () => {
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
   const [step, setStep] = useState<"plan" | "form">("plan");
   const [selectedPlan, setSelectedPlan] = useState("");
   const [name, setName] = useState("");
@@ -63,6 +46,16 @@ const Register = () => {
     () => name.trim() && email.trim() && document.trim() && password.trim() && confirmPassword.trim(),
     [confirmPassword, document, email, name, password],
   );
+
+  const selectedPlanName = plans.find((p) => p.id === selectedPlan)?.name ?? "";
+
+  useEffect(() => {
+    fetch("/v1/subscriptions/pricing")
+      .then((r) => r.json())
+      .then((data: PricingPlan[]) => setPlans(data))
+      .catch(() => { /* silently ignore — user will see empty list */ })
+      .finally(() => setLoadingPlans(false));
+  }, []);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -167,50 +160,50 @@ const Register = () => {
               <h2 className="font-display mb-1 text-2xl font-bold">Escolha um plano</h2>
               <p className="mb-6 text-muted-foreground">Você pode mudar de plano a qualquer momento.</p>
 
-              <div className="grid gap-4 mb-6">
-                {PLANS.map((plan) => (
-                  <button
-                    key={plan.code}
-                    type="button"
-                    onClick={() => setSelectedPlan(plan.code)}
-                    className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
-                      selectedPlan === plan.code
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/40"
-                    } ${plan.highlighted ? "relative" : ""}`}
-                  >
-                    {plan.highlighted && (
-                      <span className="absolute -top-2.5 left-4 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
-                        Mais popular
-                      </span>
-                    )}
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-semibold text-base">{plan.name}</p>
-                        <ul className="mt-2 space-y-1">
-                          {plan.features.map((f) => (
-                            <li key={f} className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                              {f}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <span className="text-2xl font-bold">{plan.price}</span>
-                        <span className="text-sm text-muted-foreground">{plan.period}</span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {loadingPlans ? (
+                <div className="flex justify-center py-10 text-muted-foreground text-sm">Carregando planos...</div>
+              ) : plans.length === 0 ? (
+                <div className="flex justify-center py-10 text-muted-foreground text-sm">Nenhum plano disponível no momento.</div>
+              ) : (
+                <div className="grid gap-4 mb-6">
+                  {plans.map((plan, idx) => {
+                    const highlighted = plans.length > 1 && idx === Math.floor(plans.length / 2);
+                    const price = plan.price_monthly.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                    return (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => setSelectedPlan(plan.id)}
+                        className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
+                          selectedPlan === plan.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40"
+                        } ${highlighted ? "relative" : ""}`}
+                      >
+                        {highlighted && (
+                          <span className="absolute -top-2.5 left-4 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
+                            Mais popular
+                          </span>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-base">{plan.name}</p>
+                          <div className="text-right shrink-0 ml-4">
+                            <span className="text-2xl font-bold">{price}</span>
+                            <span className="text-sm text-muted-foreground">/mês</span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               <Button
                 disabled={!selectedPlan}
                 onClick={() => setStep("form")}
                 className="gradient-primary h-11 w-full font-semibold text-primary-foreground"
               >
-                Continuar com o plano {PLANS.find((p) => p.code === selectedPlan)?.name ?? ""}
+                Continuar com o plano {selectedPlanName}
               </Button>
             </>
           ) : (
@@ -225,7 +218,7 @@ const Register = () => {
                 </button>
                 <span className="text-sm text-muted-foreground">
                   · Plano{" "}
-                  <span className="font-medium text-foreground capitalize">{selectedPlan}</span>
+                  <span className="font-medium text-foreground">{selectedPlanName}</span>
                 </span>
               </div>
 
