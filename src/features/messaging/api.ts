@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/use-auth";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { pageItems, type Page } from "@/lib/collections";
 
 export interface MessageTemplate {
   id: string;
@@ -52,7 +52,7 @@ export function useMessagesQuery() {
 
   return useQuery({
     queryKey: ["messages", activeClinicId],
-    queryFn: async () => ensureArray(await apiRequest<MessageDispatch[] | null>("/messages", { clinic: true })),
+    queryFn: async () => pageItems(await apiRequest<Page<MessageDispatch>>("/messages", { clinic: true })),
     enabled: status === "authenticated" && Boolean(activeClinicId),
   });
 }
@@ -62,7 +62,7 @@ export function useMessageTemplatesQuery() {
 
   return useQuery({
     queryKey: ["message-templates", activeClinicId],
-    queryFn: async () => ensureArray(await apiRequest<MessageTemplate[] | null>("/message-templates", { clinic: true })),
+    queryFn: async () => pageItems(await apiRequest<Page<MessageTemplate>>("/message-templates", { clinic: true })),
     enabled: status === "authenticated" && Boolean(activeClinicId),
   });
 }

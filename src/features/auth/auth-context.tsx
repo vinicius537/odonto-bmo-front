@@ -67,7 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const isUnauthorized = error instanceof Error && "status" in error && error.status === 401;
 
       if (!isUnauthorized) {
-        console.error("Failed to refresh auth session:", error);
+        if (import.meta.env.DEV) {
+          console.error("Failed to refresh auth session:", error);
+        }
         setSession(currentSession);
         setStatus(currentSession ? "authenticated" : "unauthenticated");
         return;

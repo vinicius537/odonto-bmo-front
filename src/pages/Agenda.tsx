@@ -38,7 +38,7 @@ import { useAuth } from "@/features/auth/use-auth";
 import type { ClinicUser } from "@/features/clinics/api";
 import type { Patient } from "@/features/patients/api";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 import { formatDateValue, toValidDate } from "@/lib/date";
 import { translateAppointmentStatus, translateUserRole } from "@/lib/status-labels";
 
@@ -182,7 +182,7 @@ const Agenda = () => {
 
       try {
         const [appointmentsResponse, clinicUsersResponse, patientsResponse] = await Promise.all([
-          apiRequest<Appointment[] | null>("/appointments", {
+          apiRequest<Page<Appointment>>("/appointments", {
             clinic: true,
             query: {
               date_from: range.from.toISOString(),
@@ -190,7 +190,7 @@ const Agenda = () => {
             },
           }),
           apiRequest<ClinicUser[] | null>("/clinic-users", { clinic: true }),
-          apiRequest<Patient[] | null>("/patients", {
+          apiRequest<Page<Patient>>("/patients", {
             clinic: true,
             query: { search: "" },
           }),
@@ -200,10 +200,10 @@ const Agenda = () => {
           return;
         }
 
-        setAppointments(ensureArray(appointmentsResponse));
+        setAppointments(pageItems(appointmentsResponse));
         setClinicUsers(ensureArray(clinicUsersResponse));
         setPatients(
-          ensureArray(patientsResponse).map((patient) => ({
+          pageItems(patientsResponse).map((patient) => ({
             ...patient,
             consents: ensureArray(patient.consents),
             procedures_count: Number.isFinite(patient.procedures_count) ? patient.procedures_count : 0,
@@ -280,14 +280,14 @@ const Agenda = () => {
         });
         toast({ title: "Consulta criada", description: "A agenda foi atualizada com sucesso." });
       }
-      const refreshedAppointments = await apiRequest<Appointment[] | null>("/appointments", {
+      const refreshedAppointments = await apiRequest<Page<Appointment>>("/appointments", {
         clinic: true,
         query: {
           date_from: range.from.toISOString(),
           date_to: range.to.toISOString(),
         },
       });
-      setAppointments(ensureArray(refreshedAppointments));
+      setAppointments(pageItems(refreshedAppointments));
       setDialogOpen(false);
       setEditingAppointmentId(null);
       setForm(emptyForm(currentDate));
@@ -309,14 +309,14 @@ const Agenda = () => {
         clinic: true,
         method: "POST",
       });
-      const refreshedAppointments = await apiRequest<Appointment[] | null>("/appointments", {
+      const refreshedAppointments = await apiRequest<Page<Appointment>>("/appointments", {
         clinic: true,
         query: {
           date_from: range.from.toISOString(),
           date_to: range.to.toISOString(),
         },
       });
-      setAppointments(ensureArray(refreshedAppointments));
+      setAppointments(pageItems(refreshedAppointments));
       toast({ title: "Consulta confirmada", description: "O status foi atualizado." });
     } catch (error) {
       toast({
@@ -336,14 +336,14 @@ const Agenda = () => {
         clinic: true,
         method: "POST",
       });
-      const refreshedAppointments = await apiRequest<Appointment[] | null>("/appointments", {
+      const refreshedAppointments = await apiRequest<Page<Appointment>>("/appointments", {
         clinic: true,
         query: {
           date_from: range.from.toISOString(),
           date_to: range.to.toISOString(),
         },
       });
-      setAppointments(ensureArray(refreshedAppointments));
+      setAppointments(pageItems(refreshedAppointments));
       toast({ title: "Consulta cancelada", description: "A agenda foi atualizada." });
     } catch (error) {
       toast({

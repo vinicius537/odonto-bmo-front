@@ -17,7 +17,7 @@ import { toast } from "@/components/ui/use-toast";
 import { type Patient, type PatientInput } from "@/features/patients/api";
 import { useAuth } from "@/features/auth/use-auth";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 import { formatDateValue, toDateInput, toIsoDate } from "@/lib/date";
 import { formatPhoneBR, isValidBrazilPhone, normalizeBrazilPhoneDigits } from "@/lib/masks";
 import { translatePatientStatus } from "@/lib/status-labels";
@@ -81,14 +81,14 @@ const Pacientes = () => {
       setIsLoading(true);
 
       try {
-        const response = await apiRequest<Patient[] | null>("/patients", {
+        const response = await apiRequest<Page<Patient>>("/patients", {
           clinic: true,
           query: { search },
         });
 
         if (!cancelled) {
           setPatients(
-            ensureArray(response).map((patient) => ({
+            pageItems(response).map((patient) => ({
               ...patient,
               consents: ensureArray(patient.consents),
               procedures_count: Number.isFinite(patient.procedures_count) ? patient.procedures_count : 0,
@@ -180,12 +180,12 @@ const Pacientes = () => {
         });
         toast({ title: "Paciente criado", description: "Cadastro realizado com sucesso." });
       }
-      const refreshedPatients = await apiRequest<Patient[] | null>("/patients", {
+      const refreshedPatients = await apiRequest<Page<Patient>>("/patients", {
         clinic: true,
         query: { search },
       });
       setPatients(
-        ensureArray(refreshedPatients).map((patient) => ({
+        pageItems(refreshedPatients).map((patient) => ({
           ...patient,
           consents: ensureArray(patient.consents),
           procedures_count: Number.isFinite(patient.procedures_count) ? patient.procedures_count : 0,

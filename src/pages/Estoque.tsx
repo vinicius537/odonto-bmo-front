@@ -23,7 +23,7 @@ import {
 } from "@/features/inventory/api";
 import { useAuth } from "@/features/auth/use-auth";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 import { formatDateValue } from "@/lib/date";
 
 const emptyItem: InventoryItemInput = {
@@ -92,7 +92,7 @@ const Estoque = () => {
       try {
         const [summaryResponse, itemsResponse] = await Promise.all([
           apiRequest<InventorySummary>("/inventory/summary", { clinic: true }),
-          apiRequest<InventoryItem[] | null>("/inventory/items", { clinic: true }),
+          apiRequest<Page<InventoryItem>>("/inventory/items", { clinic: true }),
         ]);
 
         if (cancelled) {
@@ -103,7 +103,7 @@ const Estoque = () => {
           ...summaryResponse,
           recent_movements: ensureArray(summaryResponse.recent_movements),
         });
-        setItems(ensureArray(itemsResponse));
+        setItems(pageItems(itemsResponse));
       } catch {
         if (!cancelled) {
           setSummary(null);
@@ -134,11 +134,11 @@ const Estoque = () => {
 
     const loadMovements = async () => {
       try {
-        const response = await apiRequest<InventoryMovement[] | null>(`/inventory/items/${movementItem.id}/movements`, {
+        const response = await apiRequest<Page<InventoryMovement>>(`/inventory/items/${movementItem.id}/movements`, {
           clinic: true,
         });
         if (!cancelled) {
-          setMovements(ensureArray(response));
+          setMovements(pageItems(response));
         }
       } catch {
         if (!cancelled) {
@@ -203,13 +203,13 @@ const Estoque = () => {
       }
       const [summaryResponse, itemsResponse] = await Promise.all([
         apiRequest<InventorySummary>("/inventory/summary", { clinic: true }),
-        apiRequest<InventoryItem[] | null>("/inventory/items", { clinic: true }),
+        apiRequest<Page<InventoryItem>>("/inventory/items", { clinic: true }),
       ]);
       setSummary({
         ...summaryResponse,
         recent_movements: ensureArray(summaryResponse.recent_movements),
       });
-      setItems(ensureArray(itemsResponse));
+      setItems(pageItems(itemsResponse));
       setItemDialogOpen(false);
     } catch (error) {
       toast({
@@ -236,15 +236,15 @@ const Estoque = () => {
       });
       const [summaryResponse, itemsResponse, movementsResponse] = await Promise.all([
         apiRequest<InventorySummary>("/inventory/summary", { clinic: true }),
-        apiRequest<InventoryItem[] | null>("/inventory/items", { clinic: true }),
-        apiRequest<InventoryMovement[] | null>(`/inventory/items/${movementItem.id}/movements`, { clinic: true }),
+        apiRequest<Page<InventoryItem>>("/inventory/items", { clinic: true }),
+        apiRequest<Page<InventoryMovement>>(`/inventory/items/${movementItem.id}/movements`, { clinic: true }),
       ]);
       setSummary({
         ...summaryResponse,
         recent_movements: ensureArray(summaryResponse.recent_movements),
       });
-      setItems(ensureArray(itemsResponse));
-      setMovements(ensureArray(movementsResponse));
+      setItems(pageItems(itemsResponse));
+      setMovements(pageItems(movementsResponse));
       toast({ title: "Movimentacao registrada", description: "O saldo do item foi atualizado." });
       setMovementDialogOpen(false);
     } catch (error) {

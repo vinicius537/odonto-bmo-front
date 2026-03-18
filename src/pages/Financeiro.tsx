@@ -22,7 +22,7 @@ import {
   type FinancialSummary,
 } from "@/features/finance/api";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 import { formatDateValue, toDateTimeLocalInput, toIsoDateTime } from "@/lib/date";
 import { pushNotification } from "@/lib/notifications";
 
@@ -85,7 +85,7 @@ const Financeiro = () => {
       try {
         const [summaryResponse, entriesResponse] = await Promise.all([
           apiRequest<FinancialSummary>("/financial/summary", { clinic: true }),
-          apiRequest<FinancialEntry[] | null>("/financial/entries", {
+          apiRequest<Page<FinancialEntry>>("/financial/entries", {
             clinic: true,
             query: {
               type: typeFilter,
@@ -102,7 +102,7 @@ const Financeiro = () => {
           ...summaryResponse,
           recent_entries: ensureArray(summaryResponse.recent_entries),
         });
-        setEntries(ensureArray(entriesResponse));
+        setEntries(pageItems(entriesResponse));
       } catch {
         if (!cancelled) {
           setSummary(null);
@@ -148,7 +148,7 @@ const Financeiro = () => {
   const reloadFinancialData = async () => {
     const [summaryResponse, entriesResponse] = await Promise.all([
       apiRequest<FinancialSummary>("/financial/summary", { clinic: true }),
-      apiRequest<FinancialEntry[] | null>("/financial/entries", {
+      apiRequest<Page<FinancialEntry>>("/financial/entries", {
         clinic: true,
         query: {
           type: typeFilter,
@@ -161,7 +161,7 @@ const Financeiro = () => {
       ...summaryResponse,
       recent_entries: ensureArray(summaryResponse.recent_entries),
     });
-    setEntries(ensureArray(entriesResponse));
+    setEntries(pageItems(entriesResponse));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/use-auth";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { pageItems, type Page } from "@/lib/collections";
 
 export type AppointmentStatus = "scheduled" | "pending" | "confirmed" | "cancelled" | "no_show" | "completed";
 
@@ -73,7 +73,7 @@ export function useAppointmentsQuery(filters: AppointmentFilters) {
   return useQuery({
     queryKey: ["appointments", activeClinicId, filters],
     queryFn: async () => {
-      const response = await apiRequest<Appointment[] | null>("/appointments", {
+      const response = await apiRequest<Page<Appointment>>("/appointments", {
         clinic: true,
         query: {
           status: filters.status,
@@ -82,7 +82,7 @@ export function useAppointmentsQuery(filters: AppointmentFilters) {
           doctor_user_id: filters.doctorUserId,
         },
       });
-      return ensureArray(response);
+      return pageItems(response);
     },
     enabled: status === "authenticated" && Boolean(activeClinicId),
   });

@@ -15,10 +15,12 @@ import {
   WalletCards,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { NavLink } from "@/components/NavLink";
 import { hasModuleAccess } from "@/features/auth/modules";
 import { useAuth } from "@/features/auth/use-auth";
 import type { AppModule } from "@/features/auth/types";
+import { getSubscriptionPlanLabel } from "@/features/subscriptions/presentation";
 import { useSubscription } from "@/features/subscriptions/use-subscription";
 import {
   Sidebar,
@@ -56,6 +58,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const { activeMembership, activeRole, logout } = useAuth();
   const { current, moduleFlags } = useSubscription();
+  const planLabel = current ? getSubscriptionPlanLabel(current.plan_code, current.plan_name) : null;
   const hasActiveSubscription = Boolean(current?.is_active);
   const visibleMainItems = mainItems.filter((item) => {
     if (!hasActiveSubscription) {
@@ -140,7 +143,7 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="h-10" tooltip="Escolha, troque e acompanhe o plano da clínica.">
+                    <SidebarMenuButton asChild className="h-auto py-0" tooltip="Escolha, troque e acompanhe o plano da clínica.">
                       <NavLink
                         to="/assinatura"
                         end
@@ -148,7 +151,16 @@ export function AppSidebar() {
                         activeClassName="bg-sidebar-primary/15 text-sidebar-primary font-medium"
                       >
                         <WalletCards className="h-[18px] w-[18px] shrink-0" />
-                        {!collapsed && <span className="text-sm">Assinatura</span>}
+                        {!collapsed && (
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="text-sm">Assinatura</span>
+                            {planLabel && (
+                              <Badge variant="outline" className="w-fit text-[10px] px-1.5 py-0 h-4 font-normal border-sidebar-border text-sidebar-foreground/60">
+                                {planLabel}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

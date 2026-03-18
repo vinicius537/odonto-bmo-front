@@ -26,6 +26,7 @@ import Satisfacao from "./pages/Satisfacao";
 import Equipe from "./pages/Equipe";
 import Configuracoes from "./pages/Configuracoes";
 import Assinatura from "./pages/Assinatura";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -39,6 +40,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Login />} />
+                <Route path="/pricing" element={<Pricing />} />
                 <Route path="/cadastro" element={<Register />} />
                 <Route path="/esqueci-senha" element={<ForgotPassword />} />
                 <Route path="/redefinir-senha" element={<ResetPassword />} />

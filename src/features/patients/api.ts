@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/use-auth";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 
 export interface Patient {
   id: string;
@@ -74,11 +74,11 @@ export function usePatientsQuery(search: string) {
   return useQuery({
     queryKey: ["patients", activeClinicId, search],
     queryFn: async () => {
-      const response = await apiRequest<Patient[] | null>("/patients", {
+      const response = await apiRequest<Page<Patient>>("/patients", {
         clinic: true,
         query: { search },
       });
-      return ensureArray(response).map(normalizePatient);
+      return pageItems(response).map(normalizePatient);
     },
     enabled: status === "authenticated" && Boolean(activeClinicId),
   });
@@ -117,6 +117,71 @@ export function useUpdatePatientMutation() {
       void queryClient.invalidateQueries({ queryKey: ["patients", activeClinicId] });
       void queryClient.invalidateQueries({ queryKey: ["patient-timeline", activeClinicId, variables.patientId] });
       void queryClient.invalidateQueries({ queryKey: ["medical-record", activeClinicId, variables.patientId] });
+    },
+  });
+}
+
+export interface PresignAttachmentInput {
+  file_name: string;
+  content_type: string;
+}
+
+export interface PresignAttachmentResult {
+  upload_url: string;
+  object_key: string;
+  file_name: string;
+  content_type: string;
+}
+
+export function usePresignAttachmentMutation() {
+  const queryClient = useQueryClient();
+  const { activeClinicId } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ patientId, input }: { patientId: string; input: PresignAttachmentInput }) =>
+      apiRequest<PresignAttachmentResult>(`/patients/${patientId}/attachments/presign`, {
+        clinic: true,
+        method: "POST",
+        body: input,
+      }),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["patient-timeline", activeClinicId, variables.patientId] });
+    },
+  });
+}
+
+export function useUploadAttachmentMutation() {
+  const queryClient = useQueryClient();
+  const { activeClinicId } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ patientId, file }: { patientId: string; file: File }) => {
+      const form = new FormData();
+      form.append("file", file);
+      return apiRequest<AttachmentRecord>(`/patients/${patientId}/attachments`, {
+        clinic: true,
+        method: "POST",
+        body: form as unknown,
+      });
+    },
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["patient-timeline", activeClinicId, variables.patientId] });
+    },
+  });
+}
+
+export function useDeleteAttachmentMutation() {
+  const queryClient = useQueryClient();
+  const { activeClinicId } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ patientId, attachmentId }: { patientId: string; attachmentId: string }) =>
+      apiRequest<void>(`/patients/${patientId}/attachments/${attachmentId}`, {
+        clinic: true,
+        method: "DELETE",
+      }),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["patient-timeline", activeClinicId, variables.patientId] });
     },
   });
 }

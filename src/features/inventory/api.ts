@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/use-auth";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 
 export interface InventoryItem {
   id: string;
@@ -77,7 +77,7 @@ export function useInventoryItemsQuery() {
 
   return useQuery({
     queryKey: ["inventory-items", activeClinicId],
-    queryFn: async () => ensureArray(await apiRequest<InventoryItem[] | null>("/inventory/items", { clinic: true })),
+    queryFn: async () => pageItems(await apiRequest<Page<InventoryItem>>("/inventory/items", { clinic: true })),
     enabled: status === "authenticated" && Boolean(activeClinicId),
   });
 }
@@ -88,7 +88,7 @@ export function useInventoryMovementsQuery(itemId: string | null) {
   return useQuery({
     queryKey: ["inventory-movements", activeClinicId, itemId],
     queryFn: async () =>
-      ensureArray(await apiRequest<InventoryMovement[] | null>(`/inventory/items/${itemId}/movements`, { clinic: true })),
+      pageItems(await apiRequest<Page<InventoryMovement>>(`/inventory/items/${itemId}/movements`, { clinic: true })),
     enabled: status === "authenticated" && Boolean(activeClinicId) && Boolean(itemId),
   });
 }

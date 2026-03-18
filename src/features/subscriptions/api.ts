@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/client";
 
 import type {
   ClinicSubscription,
+  PricingPlan,
   SubscriptionCheckoutInput,
   SubscriptionCurrentResponse,
   SubscriptionPlan,
@@ -25,4 +26,8 @@ export function checkoutSubscriptionRequest(input: SubscriptionCheckoutInput) {
     clinic: true,
     body: input,
   });
+}
+
+export function listPricingPlansRequest() {
+  return apiRequest<PricingPlan[]>("/subscriptions/pricing", { auth: false });
 }

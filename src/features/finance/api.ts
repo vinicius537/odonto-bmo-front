@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/use-auth";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 
 export interface FinancialEntry {
   id: string;
@@ -68,8 +68,8 @@ export function useFinancialEntriesQuery(filters: FinancialFilters) {
   return useQuery({
     queryKey: ["financial-entries", activeClinicId, filters],
     queryFn: async () =>
-      ensureArray(
-        await apiRequest<FinancialEntry[] | null>("/financial/entries", {
+      pageItems(
+        await apiRequest<Page<FinancialEntry>>("/financial/entries", {
           clinic: true,
           query: {
             type: filters.type,

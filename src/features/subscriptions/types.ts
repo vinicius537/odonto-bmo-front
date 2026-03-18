@@ -64,3 +64,11 @@ export interface SubscriptionCheckoutInput {
   payment_method: SubscriptionPaymentMethod;
   card?: SubscriptionCardInput;
 }
+
+// Normalized plan returned by the public /subscriptions/pricing endpoint
+export interface PricingPlan {
+  id: string;
+  name: string;
+  price_monthly: number;
+  values: Record<string, unknown>;
+}

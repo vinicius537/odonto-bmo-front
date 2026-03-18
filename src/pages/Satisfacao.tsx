@@ -19,7 +19,7 @@ import type { Appointment } from "@/features/appointments/api";
 import { useAuth } from "@/features/auth/use-auth";
 import type { CreateMessageTemplateInput, MessageDispatch, MessageTemplate, SendAppointmentMessageInput } from "@/features/messaging/api";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 import { formatDateValue } from "@/lib/date";
 import { translateMessageStatus } from "@/lib/status-labels";
 
@@ -99,13 +99,13 @@ const Satisfacao = () => {
     try {
       const [overviewResponse, appointmentsResponse, templatesResponse] = await Promise.all([
         apiRequest<SatisfactionOverview>("/satisfaction/overview", { clinic: true }),
-        apiRequest<Appointment[] | null>("/appointments", {
+        apiRequest<Page<Appointment>>("/appointments", {
           clinic: true,
           query: {
             status: "completed",
           },
         }),
-        apiRequest<MessageTemplate[] | null>("/message-templates", { clinic: true }),
+        apiRequest<Page<MessageTemplate>>("/message-templates", { clinic: true }),
       ]);
 
       setOverview({
@@ -113,8 +113,8 @@ const Satisfacao = () => {
         pending_follow_ups: ensureArray(overviewResponse.pending_follow_ups),
         recent_follow_ups: ensureArray(overviewResponse.recent_follow_ups),
       });
-      setAppointments(ensureArray(appointmentsResponse));
-      setTemplates(ensureArray(templatesResponse));
+      setAppointments(pageItems(appointmentsResponse));
+      setTemplates(pageItems(templatesResponse));
     } catch {
       setOverview(emptyOverview);
       setAppointments([]);

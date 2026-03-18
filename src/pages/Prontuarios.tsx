@@ -38,7 +38,7 @@ import {
 import { useAuth } from "@/features/auth/use-auth";
 import { type Patient, type PatientTimeline } from "@/features/patients/api";
 import { apiRequest, getApiBaseUrl } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 import { formatDateValue, toValidDate } from "@/lib/date";
 import { pushNotification } from "@/lib/notifications";
 import { loadStoredSession } from "@/lib/session";
@@ -138,14 +138,14 @@ const Prontuarios = () => {
       setIsLoadingPatients(true);
 
       try {
-        const response = await apiRequest<Patient[] | null>("/patients", {
+        const response = await apiRequest<Page<Patient>>("/patients", {
           clinic: true,
           query: { search },
         });
 
         if (!cancelled) {
           setPatients(
-            ensureArray(response).map((patient) => ({
+            pageItems(response).map((patient) => ({
               ...patient,
               consents: ensureArray(patient.consents),
               procedures_count: Number.isFinite(patient.procedures_count) ? patient.procedures_count : 0,

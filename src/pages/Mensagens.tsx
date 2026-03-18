@@ -25,7 +25,7 @@ import {
   type SendAppointmentMessageInput,
 } from "@/features/messaging/api";
 import { apiRequest } from "@/lib/api/client";
-import { ensureArray } from "@/lib/collections";
+import { ensureArray, pageItems, type Page } from "@/lib/collections";
 import { formatDateValue } from "@/lib/date";
 import { translateMessageChannel, translateMessageKind, translateMessageStatus } from "@/lib/status-labels";
 
@@ -77,9 +77,9 @@ const Mensagens = () => {
 
       try {
         const [messagesResponse, templatesResponse, appointmentsResponse] = await Promise.all([
-          apiRequest<MessageDispatch[] | null>("/messages", { clinic: true }),
-          apiRequest<MessageTemplate[] | null>("/message-templates", { clinic: true }),
-          apiRequest<Appointment[] | null>("/appointments", {
+          apiRequest<Page<MessageDispatch>>("/messages", { clinic: true }),
+          apiRequest<Page<MessageTemplate>>("/message-templates", { clinic: true }),
+          apiRequest<Page<Appointment>>("/appointments", {
             clinic: true,
             query: {
               date_from: new Date().toISOString(),
@@ -92,9 +92,9 @@ const Mensagens = () => {
           return;
         }
 
-        setMessages(ensureArray(messagesResponse));
-        setTemplates(ensureArray(templatesResponse));
-        setAppointments(ensureArray(appointmentsResponse));
+        setMessages(pageItems(messagesResponse));
+        setTemplates(pageItems(templatesResponse));
+        setAppointments(pageItems(appointmentsResponse));
       } catch {
         if (!cancelled) {
           setMessages([]);
@@ -139,8 +139,8 @@ const Mensagens = () => {
         method: "POST",
         body: input,
       });
-      const refreshedMessages = await apiRequest<MessageDispatch[] | null>("/messages", { clinic: true });
-      setMessages(ensureArray(refreshedMessages));
+      const refreshedMessages = await apiRequest<Page<MessageDispatch>>("/messages", { clinic: true });
+      setMessages(pageItems(refreshedMessages));
       toast({ title: "Mensagem enviada", description: "O disparo foi registrado com sucesso." });
       setSendDialogOpen(false);
       setAppointmentId("");
@@ -167,8 +167,8 @@ const Mensagens = () => {
         method: "POST",
         body: templateForm,
       });
-      const refreshedTemplates = await apiRequest<MessageTemplate[] | null>("/message-templates", { clinic: true });
-      setTemplates(ensureArray(refreshedTemplates));
+      const refreshedTemplates = await apiRequest<Page<MessageTemplate>>("/message-templates", { clinic: true });
+      setTemplates(pageItems(refreshedTemplates));
       toast({ title: "Template criado", description: "O novo template já está disponível para envio." });
       setTemplateDialogOpen(false);
       setTemplateForm(emptyTemplate);

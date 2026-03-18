@@ -42,7 +42,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         if (cancelled) {
           return;
         }
-        console.error("Falha ao carregar assinatura:", error);
+        if (import.meta.env.DEV) {
+          console.error("Falha ao carregar assinatura:", error);
+        }
         setPlans([]);
         setCurrent(null);
         setStatus("ready");
