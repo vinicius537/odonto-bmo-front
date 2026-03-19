@@ -168,7 +168,7 @@ const Register = () => {
 
       {/* Right panel */}
       <div className="flex flex-1 items-center justify-center bg-background p-8">
-        <div className="w-full max-w-lg animate-fade-in">
+        <div className={`w-full animate-fade-in ${step === "plan" ? "max-w-4xl" : "max-w-lg"}`}>
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-lg">
               <Stethoscope className="h-5 w-5 text-primary-foreground" />
@@ -178,71 +178,94 @@ const Register = () => {
 
           {step === "plan" ? (
             <>
-              <h2 className="font-display mb-1 text-2xl font-bold">Escolha um plano</h2>
-              <p className="mb-6 text-muted-foreground">Você pode mudar de plano a qualquer momento.</p>
+              <div className="mb-8 text-center">
+                <h2 className="font-display text-3xl font-bold mb-2">
+                  Qual é o seu <span className="text-primary">plano ideal?</span>
+                </h2>
+                <p className="text-muted-foreground">Você pode mudar de plano a qualquer momento.</p>
+              </div>
 
               {loadingPlans ? (
                 <div className="flex justify-center py-10 text-muted-foreground text-sm">Carregando planos...</div>
               ) : plans.length === 0 ? (
                 <div className="flex justify-center py-10 text-muted-foreground text-sm">Nenhum plano disponível no momento.</div>
-              ) : (
-                <div className="grid gap-4 mb-6">
-                  {plans.map((plan, idx) => {
-                    const highlighted = plans.length > 1 && idx === Math.floor(plans.length / 2);
-                    const price = plan.price_monthly.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-                    return (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        onClick={() => setSelectedPlan(plan.id)}
-                        className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
-                          selectedPlan === plan.id
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/40"
-                        } ${highlighted ? "relative" : ""}`}
-                      >
-                        {highlighted && (
-                          <span className="absolute -top-2.5 left-4 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
-                            Mais popular
-                          </span>
-                        )}
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-semibold text-base">{plan.name}</p>
-                            {(() => {
-                              const features = Object.entries(plan.values)
-                                .map(([k, v]) => formatPlanFeature(k, v))
-                                .filter((f): f is string => f !== null);
-                              return features.length > 0 ? (
-                                <ul className="mt-2 space-y-1">
-                                  {features.map((f) => (
-                                    <li key={f} className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                                      {f}
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : null;
-                            })()}
-                          </div>
-                          <div className="text-right shrink-0 ml-4">
-                            <span className="text-2xl font-bold">{price}</span>
-                            <span className="text-sm text-muted-foreground">/mês</span>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              ) : (() => {
+                // Collect all feature keys across plans, preserving order from FIELD_LABELS
+                const allKeys = Object.keys(FIELD_LABELS).filter((k) =>
+                  plans.some((p) => k in p.values)
+                );
 
-              <Button
-                disabled={!selectedPlan}
-                onClick={() => setStep("form")}
-                className="gradient-primary h-11 w-full font-semibold text-primary-foreground"
-              >
-                Continuar com o plano {selectedPlanName}
-              </Button>
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="text-left pb-4 pr-6 font-semibold text-lg w-48">
+                            Compare as<br />
+                            <span className="font-bold">funcionalidades</span>
+                          </th>
+                          {plans.map((plan, idx) => {
+                            const highlighted = plans.length > 1 && idx === Math.floor(plans.length / 2);
+                            const price = plan.price_monthly.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                            const isSelected = selectedPlan === plan.id;
+                            return (
+                              <th key={plan.id} className="pb-4 px-3 text-center min-w-[140px]">
+                                <div className={`rounded-xl border-2 p-4 transition-all ${isSelected ? "border-primary bg-primary/5" : highlighted ? "border-primary/40 bg-primary/3" : "border-border"}`}>
+                                  {highlighted && (
+                                    <span className="inline-block mb-1 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
+                                      Mais popular
+                                    </span>
+                                  )}
+                                  <div className="font-semibold text-base">{plan.name}</div>
+                                  <div className="mt-1">
+                                    <span className="text-xl font-bold">{price}</span>
+                                    <span className="text-xs text-muted-foreground">/mês</span>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    className={`mt-3 w-full text-xs ${isSelected ? "gradient-primary text-primary-foreground" : highlighted ? "gradient-primary text-primary-foreground" : ""}`}
+                                    variant={isSelected || highlighted ? "default" : "outline"}
+                                    onClick={() => { setSelectedPlan(plan.id); setStep("form"); }}
+                                  >
+                                    {isSelected ? "Selecionado ✓" : "Selecionar"}
+                                  </Button>
+                                </div>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allKeys.map((key, rowIdx) => (
+                          <tr key={key} className={rowIdx % 2 === 0 ? "bg-muted/40" : ""}>
+                            <td className="py-3 pr-6 text-sm font-medium">{FIELD_LABELS[key]}</td>
+                            {plans.map((plan) => {
+                              const val = plan.values[key];
+                              let cell: React.ReactNode;
+                              if (typeof val === "boolean") {
+                                cell = val
+                                  ? <Check className="h-5 w-5 text-primary mx-auto" />
+                                  : <span className="text-muted-foreground/40 text-lg mx-auto block text-center">—</span>;
+                              } else if (typeof val === "number") {
+                                cell = <span className="text-sm font-medium">{val < 0 ? "Ilimitado" : val === 0 ? "—" : val}</span>;
+                              } else if (val === undefined || val === null) {
+                                cell = <span className="text-muted-foreground/40 text-lg block text-center">—</span>;
+                              } else {
+                                cell = <span className="text-sm">{String(val)}</span>;
+                              }
+                              return (
+                                <td key={plan.id} className="py-3 px-3 text-center">
+                                  {cell}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </>
           ) : (
             <>
