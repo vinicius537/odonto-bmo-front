@@ -24,8 +24,13 @@ interface PricingPlan {
 const FIELD_LABELS: Record<string, string> = {
   max_doctors: "Dentistas",
   max_secretaries: "Secretárias",
+  agenda: "Agenda de Consultas",
+  prontuario: "Prontuário Clínico",
+  financeiro: "Módulo Financeiro",
   estoque: "Módulo de Estoque",
+  comunicacao: "Comunicação (WhatsApp)",
   equipe: "Gestão de Equipe",
+  relatorios: "Relatórios",
   satisfacao: "Pesquisa de Satisfação",
   support_priority: "Suporte Prioritário",
 };
