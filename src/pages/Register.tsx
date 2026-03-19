@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Stethoscope } from "lucide-react";
+import { Check, Eye, EyeOff, Stethoscope } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,27 @@ interface PricingPlan {
   id: string;
   name: string;
   price_monthly: number;
+  values: Record<string, unknown>;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  max_doctors: "Dentistas",
+  max_secretaries: "Secretárias",
+  estoque: "Módulo de Estoque",
+  equipe: "Gestão de Equipe",
+  satisfacao: "Pesquisa de Satisfação",
+  support_priority: "Suporte Prioritário",
+};
+
+function formatPlanFeature(key: string, value: unknown): string | null {
+  const label = FIELD_LABELS[key] ?? key;
+  if (typeof value === "boolean") return value ? label : null;
+  if (typeof value === "number") {
+    if (value < 0) return `${label}: Ilimitado`;
+    if (value === 0) return null;
+    return `${label}: ${value}`;
+  }
+  return `${label}: ${value}`;
 }
 
 function isPasswordStrong(password: string) {
@@ -185,8 +206,25 @@ const Register = () => {
                             Mais popular
                           </span>
                         )}
-                        <div className="flex items-center justify-between">
-                          <p className="font-semibold text-base">{plan.name}</p>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-base">{plan.name}</p>
+                            {(() => {
+                              const features = Object.entries(plan.values)
+                                .map(([k, v]) => formatPlanFeature(k, v))
+                                .filter((f): f is string => f !== null);
+                              return features.length > 0 ? (
+                                <ul className="mt-2 space-y-1">
+                                  {features.map((f) => (
+                                    <li key={f} className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                      {f}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null;
+                            })()}
+                          </div>
                           <div className="text-right shrink-0 ml-4">
                             <span className="text-2xl font-bold">{price}</span>
                             <span className="text-sm text-muted-foreground">/mês</span>
