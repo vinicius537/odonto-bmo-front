@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Check, Eye, EyeOff, Stethoscope } from "lucide-react";
+import { Check, Copy, CreditCard, Eye, EyeOff, QrCode, Stethoscope } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/features/auth/use-auth";
+import type { CheckoutPixResponse } from "@/features/auth/api";
+import { checkoutCardRequest, checkoutPixRequest } from "@/features/auth/api";
 import { ApiError } from "@/lib/api/client";
 
 const PASSWORD_REQUIREMENTS = [
@@ -19,15 +21,19 @@ interface PricingPlan {
   name: string;
   price_monthly: number;
   values: Record<string, unknown>;
+  labels: Record<string, string>;
 }
 
 const FIELD_LABELS: Record<string, string> = {
   max_doctors: "Dentistas",
   max_secretaries: "Secretárias",
+  clinicas: "Clínicas",
+  pacientes: "Pacientes",
   agenda: "Agenda de Consultas",
   prontuario: "Prontuário Clínico",
   financeiro: "Módulo Financeiro",
   estoque: "Módulo de Estoque",
+  mensagens: "Mensagens",
   comunicacao: "Comunicação (WhatsApp)",
   equipe: "Gestão de Equipe",
   relatorios: "Relatórios",
@@ -61,6 +67,12 @@ function PlanCell({ value }: { value: unknown }) {
   return <span className="text-sm">{String(value)}</span>;
 }
 
+function isActiveValue(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  return value !== null && value !== undefined;
+}
+
 function PlanComparisonTable({
   plans,
   selectedPlan,
@@ -70,9 +82,35 @@ function PlanComparisonTable({
   selectedPlan: string;
   onSelect: (id: string) => void;
 }) {
-  const allKeys = Object.keys(FIELD_LABELS).filter((k) =>
-    plans.some((p) => k in p.values)
-  );
+  // Collect ALL keys present in any plan's values (not limited to FIELD_LABELS)
+  const allKeys = (() => {
+    const keySet = new Set<string>();
+    for (const plan of plans) {
+      for (const key of Object.keys(plan.values)) {
+        keySet.add(key);
+      }
+    }
+    const fieldLabelsOrder = Object.keys(FIELD_LABELS);
+    return Array.from(keySet).sort((a, b) => {
+      // Sort by count of plans with active value (descending) → more plans active = higher
+      const aCount = plans.filter((p) => isActiveValue(p.values[a])).length;
+      const bCount = plans.filter((p) => isActiveValue(p.values[b])).length;
+      if (aCount !== bCount) return bCount - aCount;
+      // Same count: follow FIELD_LABELS order, then alphabetical
+      const aIdx = fieldLabelsOrder.indexOf(a);
+      const bIdx = fieldLabelsOrder.indexOf(b);
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return a.localeCompare(b);
+    });
+  })();
+
+  // Merge labels from all plans (all plans share the same schema)
+  const fieldLabels: Record<string, string> = {};
+  for (const plan of plans) {
+    Object.assign(fieldLabels, plan.labels);
+  }
 
   return (
     <div className="overflow-x-auto">
@@ -116,7 +154,7 @@ function PlanComparisonTable({
         <tbody>
           {allKeys.map((key, rowIdx) => (
             <tr key={key} className={rowIdx % 2 === 0 ? "bg-muted/40" : ""}>
-              <td className="py-3 pr-6 text-sm font-medium rounded-l-md">{FIELD_LABELS[key]}</td>
+              <td className="py-3 pr-6 text-sm font-medium rounded-l-md">{FIELD_LABELS[key] ?? fieldLabels[key] ?? key}</td>
               {plans.map((plan) => (
                 <td key={plan.id} className="py-3 px-3 text-center">
                   <PlanCell value={plan.values[key]} />
@@ -137,7 +175,7 @@ function isPasswordStrong(password: string) {
 const Register = () => {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
-  const [step, setStep] = useState<"plan" | "form">("plan");
+  const [step, setStep] = useState<"plan" | "form" | "payment">("plan");
   const [selectedPlan, setSelectedPlan] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -148,6 +186,24 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [paymentTab, setPaymentTab] = useState<"pix" | "card">("pix");
+  // PIX state
+  const [pixData, setPixData] = useState<CheckoutPixResponse | null>(null);
+  const [isPixLoading, setIsPixLoading] = useState(false);
+  const [copiedPix, setCopiedPix] = useState(false);
+  // Card form state
+  const [cardHolderName, setCardHolderName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiryMonth, setCardExpiryMonth] = useState("");
+  const [cardExpiryYear, setCardExpiryYear] = useState("");
+  const [cardCCV, setCardCCV] = useState("");
+  const [cardPostalCode, setCardPostalCode] = useState("");
+  const [cardAddressNumber, setCardAddressNumber] = useState("");
+  const [cardPhone, setCardPhone] = useState("");
+  const [cardInstallments, setCardInstallments] = useState(1);
+  const [isCardSubmitting, setIsCardSubmitting] = useState(false);
+  const [cardSuccess, setCardSuccess] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { startRegister, status } = useAuth();
@@ -174,6 +230,17 @@ const Register = () => {
     }
   }, [location.state, navigate, status]);
 
+  const handleCopyPix = async () => {
+    if (!pixData?.pix_copy_paste) return;
+    try {
+      await navigator.clipboard.writeText(pixData.pix_copy_paste);
+      setCopiedPix(true);
+      setTimeout(() => setCopiedPix(false), 2000);
+    } catch {
+      toast({ title: "Não foi possível copiar", description: "Copie o código manualmente.", variant: "destructive" });
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -198,7 +265,7 @@ const Register = () => {
 
     setIsSubmitting(true);
     try {
-      const invoiceUrl = await startRegister({
+      const result = await startRegister({
         name: normalizedName,
         email: normalizedEmail,
         password: normalizedPassword,
@@ -207,17 +274,14 @@ const Register = () => {
         phone: phone.trim() || undefined,
       });
 
-      if (invoiceUrl) {
-        window.location.href = invoiceUrl;
-      } else {
-        navigate("/cadastro/pendente", { replace: true });
-      }
+      setPendingId(result.pending_id);
+      setStep("payment");
     } catch (error) {
       const isConflict = error instanceof ApiError && error.status === 409;
       toast({
         title: "Falha ao iniciar cadastro",
         description: isConflict
-          ? "Este e-mail já possui um cadastro pendente ou ativo."
+          ? "Este e-mail já possui uma conta ativa. Faça login."
           : error instanceof Error
             ? error.message
             : "Não foi possível processar o cadastro agora. Tente novamente.",
@@ -225,6 +289,63 @@ const Register = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Pre-fill card phone from registration phone when switching to card tab
+  const handleSelectCardTab = () => {
+    setPaymentTab("card");
+    if (!cardPhone && phone.trim()) setCardPhone(phone.trim());
+  };
+
+  const handleGeneratePix = async () => {
+    if (!pendingId) return;
+    setIsPixLoading(true);
+    try {
+      const result = await checkoutPixRequest({
+        pending_id: pendingId,
+        document: document.trim(),
+        phone: phone.trim() || undefined,
+      });
+      setPixData(result);
+    } catch (error) {
+      toast({
+        title: "Falha ao gerar cobrança PIX",
+        description: error instanceof Error ? error.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPixLoading(false);
+    }
+  };
+
+  const handleCardSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!pendingId) return;
+    setIsCardSubmitting(true);
+    try {
+      await checkoutCardRequest({
+        pending_id: pendingId,
+        document: document.trim(),
+        phone: cardPhone.trim() || undefined,
+        holder_name: cardHolderName.trim(),
+        number: cardNumber.replace(/\s/g, ""),
+        expiry_month: cardExpiryMonth.trim(),
+        expiry_year: cardExpiryYear.trim(),
+        ccv: cardCCV.trim(),
+        postal_code: cardPostalCode.replace(/\D/g, ""),
+        address_number: cardAddressNumber.trim(),
+        installment_count: cardInstallments,
+      });
+      setCardSuccess(true);
+    } catch (error) {
+      toast({
+        title: "Falha ao processar cartão",
+        description: error instanceof Error ? error.message : "Tente novamente ou use PIX.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCardSubmitting(false);
     }
   };
 
@@ -245,12 +366,14 @@ const Register = () => {
             <h1 className="font-display text-3xl font-bold text-primary-foreground">Odonto BMO</h1>
           </div>
           <h2 className="font-display mb-4 text-4xl font-bold leading-tight text-primary-foreground">
-            {step === "plan" ? "Escolha seu plano" : "Finalize seu cadastro"}
+            {step === "plan" ? "Escolha seu plano" : step === "form" ? "Finalize seu cadastro" : "Pagamento"}
           </h2>
           <p className="max-w-md text-lg text-primary-foreground/70">
             {step === "plan"
               ? "Selecione o plano ideal para sua clínica e comece a usar o sistema."
-              : "Preencha seus dados para criar sua conta e ir ao pagamento."}
+              : step === "form"
+              ? "Preencha seus dados para criar sua conta e ir ao pagamento."
+              : "Escolha como prefere pagar. Após a confirmação você receberá acesso ao sistema."}
           </p>
         </div>
       </div>
@@ -265,7 +388,7 @@ const Register = () => {
             <h1 className="font-display text-xl font-bold">Odonto BMO</h1>
           </div>
 
-          {step === "plan" ? (
+          {step === "plan" && (
             <>
               <div className="mb-8 text-center">
                 <h2 className="font-display text-3xl font-bold mb-2">
@@ -288,7 +411,9 @@ const Register = () => {
                 />
               )}
             </>
-          ) : (
+          )}
+
+          {step === "form" && (
             <>
               <div className="mb-4 flex items-center gap-2">
                 <button
@@ -305,7 +430,7 @@ const Register = () => {
               </div>
 
               <h2 className="font-display mb-1 text-2xl font-bold">Seus dados</h2>
-              <p className="mb-4 text-muted-foreground text-sm">Após o cadastro você será redirecionado ao pagamento.</p>
+              <p className="mb-4 text-muted-foreground text-sm">Preencha os campos abaixo para criar sua conta.</p>
 
               <div className="mb-5 rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
                 <p className="mb-2 font-medium text-foreground">Requisitos da senha</p>
@@ -376,9 +501,248 @@ const Register = () => {
                   disabled={!canSubmit || isSubmitting}
                   className="gradient-primary h-11 w-full font-semibold text-primary-foreground"
                 >
-                  {isSubmitting ? "Gerando link de pagamento..." : "Ir para o pagamento →"}
+                  {isSubmitting ? "Processando..." : "Cadastrar e ir ao pagamento →"}
                 </Button>
               </form>
+            </>
+          )}
+
+          {step === "payment" && pendingId && (
+            <>
+              <div className="mb-6">
+                <h2 className="font-display text-2xl font-bold mb-1">Pagamento</h2>
+                <p className="text-muted-foreground text-sm">
+                  Plano <span className="font-medium text-foreground">{selectedPlanName}</span> ·{" "}
+                  {plans.find((p) => p.id === selectedPlan)?.price_monthly.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}/mês
+                </p>
+              </div>
+
+              {/* Tab selector */}
+              <div className="flex gap-2 mb-6 rounded-lg border p-1 bg-muted/40">
+                <button
+                  type="button"
+                  onClick={() => setPaymentTab("pix")}
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-all ${paymentTab === "pix" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <QrCode className="h-4 w-4" />
+                  PIX
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSelectCardTab}
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-all ${paymentTab === "card" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Cartão de Crédito
+                </button>
+              </div>
+
+              {paymentTab === "pix" && (
+                <div className="flex flex-col items-center gap-4">
+                  {!pixData ? (
+                    <div className="flex flex-col items-center gap-4 py-4">
+                      <QrCode className="h-12 w-12 text-muted-foreground" />
+                      <p className="text-center text-sm text-muted-foreground">
+                        Clique para gerar o QR Code e o código PIX.
+                      </p>
+                      <Button
+                        type="button"
+                        className="gradient-primary text-primary-foreground font-semibold"
+                        onClick={handleGeneratePix}
+                        disabled={isPixLoading}
+                      >
+                        {isPixLoading ? "Gerando..." : "Gerar cobrança PIX →"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      {pixData.pix_qr_code && (
+                        <div className="rounded-xl border p-3 bg-white">
+                          <img
+                            src={`data:image/png;base64,${pixData.pix_qr_code}`}
+                            alt="QR Code PIX"
+                            className="w-48 h-48"
+                          />
+                        </div>
+                      )}
+                      {pixData.pix_copy_paste && (
+                        <div className="w-full">
+                          <p className="text-sm font-medium mb-2">PIX Copia e Cola</p>
+                          <div className="flex gap-2">
+                            <Input
+                              value={pixData.pix_copy_paste}
+                              readOnly
+                              className="text-xs font-mono h-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCopyPix}
+                              className="h-10 px-3 shrink-0"
+                            >
+                              <Copy className="h-4 w-4 mr-1" />
+                              {copiedPix ? "Copiado!" : "Copiar"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {paymentTab === "card" && (
+                cardSuccess ? (
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <Check className="h-10 w-10 text-green-500" />
+                    <p className="font-semibold text-lg">Pagamento enviado!</p>
+                    <p className="text-sm text-muted-foreground">
+                      Após a confirmação você receberá as instruções de acesso por e-mail.
+                    </p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleCardSubmit} className="space-y-4">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium">Nome no cartão</label>
+                      <Input
+                        type="text"
+                        placeholder="Como aparece no cartão"
+                        value={cardHolderName}
+                        onChange={(e) => setCardHolderName(e.target.value)}
+                        className="h-11"
+                        required
+                        autoComplete="cc-name"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium">Número do cartão</label>
+                      <Input
+                        type="text"
+                        placeholder="0000 0000 0000 0000"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value.replace(/[^\d\s]/g, ""))}
+                        maxLength={19}
+                        className="h-11 font-mono"
+                        required
+                        autoComplete="cc-number"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">Mês</label>
+                        <Input
+                          type="text"
+                          placeholder="MM"
+                          value={cardExpiryMonth}
+                          onChange={(e) => setCardExpiryMonth(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                          maxLength={2}
+                          className="h-11"
+                          required
+                          autoComplete="cc-exp-month"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">Ano</label>
+                        <Input
+                          type="text"
+                          placeholder="AAAA"
+                          value={cardExpiryYear}
+                          onChange={(e) => setCardExpiryYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          maxLength={4}
+                          className="h-11"
+                          required
+                          autoComplete="cc-exp-year"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">CVV</label>
+                        <Input
+                          type="text"
+                          placeholder="000"
+                          value={cardCCV}
+                          onChange={(e) => setCardCCV(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          maxLength={4}
+                          className="h-11"
+                          required
+                          autoComplete="cc-csc"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">CEP</label>
+                        <Input
+                          type="text"
+                          placeholder="00000-000"
+                          value={cardPostalCode}
+                          onChange={(e) => setCardPostalCode(e.target.value.replace(/[^\d-]/g, "").slice(0, 9))}
+                          className="h-11"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">Número</label>
+                        <Input
+                          type="text"
+                          placeholder="Ex: 42"
+                          value={cardAddressNumber}
+                          onChange={(e) => setCardAddressNumber(e.target.value)}
+                          className="h-11"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium">Telefone do titular <span className="text-muted-foreground">(com DDD)</span></label>
+                      <Input
+                        type="tel"
+                        placeholder="(00) 00000-0000"
+                        value={cardPhone}
+                        onChange={(e) => setCardPhone(e.target.value)}
+                        className="h-11"
+                        required
+                        autoComplete="tel"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium">Parcelas</label>
+                      <select
+                        value={cardInstallments}
+                        onChange={(e) => setCardInstallments(Number(e.target.value))}
+                        className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      >
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
+                          const plan = plans.find((p) => p.id === selectedPlan);
+                          const total = plan ? (plan.price_monthly * n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "";
+                          return (
+                            <option key={n} value={n}>
+                              {n}x {total ? `= ${total}` : ""}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={isCardSubmitting}
+                      className="gradient-primary h-11 w-full font-semibold text-primary-foreground"
+                    >
+                      {isCardSubmitting ? "Processando..." : "Pagar com Cartão →"}
+                    </Button>
+                  </form>
+                )
+              )}
+
+              <div className="mt-6 rounded-xl border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
+                Após a confirmação do pagamento você receberá um e-mail com as instruções de acesso.
+              </div>
             </>
           )}
 

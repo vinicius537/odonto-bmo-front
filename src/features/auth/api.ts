@@ -43,8 +43,61 @@ export interface StartRegisterInput {
   phone?: string;
 }
 
+export interface StartRegisterResponse {
+  pending_id: string;
+}
+
+export interface CheckoutPixInput {
+  pending_id: string;
+  document: string;
+  phone?: string;
+}
+
+export interface CheckoutPixResponse {
+  charge_id: string;
+  pix_qr_code: string;
+  pix_copy_paste: string;
+}
+
+export interface CheckoutCardInput {
+  pending_id: string;
+  document: string;
+  phone?: string;
+  holder_name: string;
+  number: string;
+  expiry_month: string;
+  expiry_year: string;
+  ccv: string;
+  postal_code: string;
+  address_number: string;
+  installment_count: number;
+}
+
+export interface CheckoutCardResponse {
+  charge_id: string;
+  status: string;
+}
+
 export function startRegisterRequest(input: StartRegisterInput) {
-  return apiRequest<{ invoice_url: string }>("/auth/start-register", {
+  return apiRequest<StartRegisterResponse>("/auth/start-register", {
+    method: "POST",
+    auth: false,
+    body: input,
+    retryOnUnauthorized: false,
+  });
+}
+
+export function checkoutPixRequest(input: CheckoutPixInput) {
+  return apiRequest<CheckoutPixResponse>("/auth/checkout-pix", {
+    method: "POST",
+    auth: false,
+    body: input,
+    retryOnUnauthorized: false,
+  });
+}
+
+export function checkoutCardRequest(input: CheckoutCardInput) {
+  return apiRequest<CheckoutCardResponse>("/auth/checkout-card", {
     method: "POST",
     auth: false,
     body: input,

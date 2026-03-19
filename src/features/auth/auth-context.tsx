@@ -118,9 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const startRegister = useCallback(async (input: StartRegisterInput): Promise<string> => {
-    const result = await startRegisterRequest(input);
-    return result.invoice_url;
+  const startRegister = useCallback(async (input: StartRegisterInput) => {
+    return startRegisterRequest(input);
   }, []);
 
   const logout = useCallback(async () => {
