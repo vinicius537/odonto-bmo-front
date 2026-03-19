@@ -41,6 +41,90 @@ function formatPlanFeature(key: string, value: unknown): string | null {
   return `${label}: ${value}`;
 }
 
+function PlanCell({ value }: { value: unknown }) {
+  if (typeof value === "boolean") {
+    return value
+      ? <Check className="h-5 w-5 text-primary mx-auto" />
+      : <span className="text-muted-foreground/40 text-lg">—</span>;
+  }
+  if (typeof value === "number") {
+    return <span className="text-sm font-medium">{value < 0 ? "Ilimitado" : value === 0 ? "—" : value}</span>;
+  }
+  if (value === undefined || value === null) {
+    return <span className="text-muted-foreground/40 text-lg">—</span>;
+  }
+  return <span className="text-sm">{String(value)}</span>;
+}
+
+function PlanComparisonTable({
+  plans,
+  selectedPlan,
+  onSelect,
+}: {
+  plans: PricingPlan[];
+  selectedPlan: string;
+  onSelect: (id: string) => void;
+}) {
+  const allKeys = Object.keys(FIELD_LABELS).filter((k) =>
+    plans.some((p) => k in p.values)
+  );
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            <th className="text-left pb-4 pr-6 font-semibold text-lg w-48 align-bottom">
+              Compare as <span className="font-bold">funcionalidades</span>
+            </th>
+            {plans.map((plan, idx) => {
+              const highlighted = plans.length > 1 && idx === Math.floor(plans.length / 2);
+              const isSelected = selectedPlan === plan.id;
+              const price = plan.price_monthly.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+              return (
+                <th key={plan.id} className="pb-4 px-3 text-center min-w-[140px] align-bottom">
+                  <div className={`rounded-xl border-2 p-4 transition-all ${isSelected ? "border-primary bg-primary/5" : highlighted ? "border-primary/40" : "border-border"}`}>
+                    {highlighted && (
+                      <span className="inline-block mb-1 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
+                        Mais popular
+                      </span>
+                    )}
+                    <div className="font-semibold text-base">{plan.name}</div>
+                    <div className="mt-1 mb-3">
+                      <span className="text-xl font-bold">{price}</span>
+                      <span className="text-xs text-muted-foreground">/mês</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      className={`w-full text-xs ${highlighted || isSelected ? "gradient-primary text-primary-foreground" : ""}`}
+                      variant={highlighted || isSelected ? "default" : "outline"}
+                      onClick={() => onSelect(plan.id)}
+                    >
+                      {isSelected ? "Selecionado ✓" : "Selecionar"}
+                    </Button>
+                  </div>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {allKeys.map((key, rowIdx) => (
+            <tr key={key} className={rowIdx % 2 === 0 ? "bg-muted/40" : ""}>
+              <td className="py-3 pr-6 text-sm font-medium rounded-l-md">{FIELD_LABELS[key]}</td>
+              {plans.map((plan) => (
+                <td key={plan.id} className="py-3 px-3 text-center">
+                  <PlanCell value={plan.values[key]} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function isPasswordStrong(password: string) {
   return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
 }
@@ -185,87 +269,19 @@ const Register = () => {
                 <p className="text-muted-foreground">Você pode mudar de plano a qualquer momento.</p>
               </div>
 
-              {loadingPlans ? (
+              {loadingPlans && (
                 <div className="flex justify-center py-10 text-muted-foreground text-sm">Carregando planos...</div>
-              ) : plans.length === 0 ? (
+              )}
+              {!loadingPlans && plans.length === 0 && (
                 <div className="flex justify-center py-10 text-muted-foreground text-sm">Nenhum plano disponível no momento.</div>
-              ) : (() => {
-                // Collect all feature keys across plans, preserving order from FIELD_LABELS
-                const allKeys = Object.keys(FIELD_LABELS).filter((k) =>
-                  plans.some((p) => k in p.values)
-                );
-
-                return (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr>
-                          <th className="text-left pb-4 pr-6 font-semibold text-lg w-48">
-                            Compare as<br />
-                            <span className="font-bold">funcionalidades</span>
-                          </th>
-                          {plans.map((plan, idx) => {
-                            const highlighted = plans.length > 1 && idx === Math.floor(plans.length / 2);
-                            const price = plan.price_monthly.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-                            const isSelected = selectedPlan === plan.id;
-                            return (
-                              <th key={plan.id} className="pb-4 px-3 text-center min-w-[140px]">
-                                <div className={`rounded-xl border-2 p-4 transition-all ${isSelected ? "border-primary bg-primary/5" : highlighted ? "border-primary/40 bg-primary/3" : "border-border"}`}>
-                                  {highlighted && (
-                                    <span className="inline-block mb-1 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
-                                      Mais popular
-                                    </span>
-                                  )}
-                                  <div className="font-semibold text-base">{plan.name}</div>
-                                  <div className="mt-1">
-                                    <span className="text-xl font-bold">{price}</span>
-                                    <span className="text-xs text-muted-foreground">/mês</span>
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    className={`mt-3 w-full text-xs ${isSelected ? "gradient-primary text-primary-foreground" : highlighted ? "gradient-primary text-primary-foreground" : ""}`}
-                                    variant={isSelected || highlighted ? "default" : "outline"}
-                                    onClick={() => { setSelectedPlan(plan.id); setStep("form"); }}
-                                  >
-                                    {isSelected ? "Selecionado ✓" : "Selecionar"}
-                                  </Button>
-                                </div>
-                              </th>
-                            );
-                          })}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allKeys.map((key, rowIdx) => (
-                          <tr key={key} className={rowIdx % 2 === 0 ? "bg-muted/40" : ""}>
-                            <td className="py-3 pr-6 text-sm font-medium">{FIELD_LABELS[key]}</td>
-                            {plans.map((plan) => {
-                              const val = plan.values[key];
-                              let cell: React.ReactNode;
-                              if (typeof val === "boolean") {
-                                cell = val
-                                  ? <Check className="h-5 w-5 text-primary mx-auto" />
-                                  : <span className="text-muted-foreground/40 text-lg mx-auto block text-center">—</span>;
-                              } else if (typeof val === "number") {
-                                cell = <span className="text-sm font-medium">{val < 0 ? "Ilimitado" : val === 0 ? "—" : val}</span>;
-                              } else if (val === undefined || val === null) {
-                                cell = <span className="text-muted-foreground/40 text-lg block text-center">—</span>;
-                              } else {
-                                cell = <span className="text-sm">{String(val)}</span>;
-                              }
-                              return (
-                                <td key={plan.id} className="py-3 px-3 text-center">
-                                  {cell}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                );
-              })()}
+              )}
+              {!loadingPlans && plans.length > 0 && (
+                <PlanComparisonTable
+                  plans={plans}
+                  selectedPlan={selectedPlan}
+                  onSelect={(id) => { setSelectedPlan(id); setStep("form"); }}
+                />
+              )}
             </>
           ) : (
             <>
